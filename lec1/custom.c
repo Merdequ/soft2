@@ -10,6 +10,7 @@ LIFE GAME
 #define WIDTH 70
 #define HEIGHT 40
 #define LIVE 'O'
+#define ENEMY 'X'
 #define DEAD '-'
 #define CLOCK 60 //ms
 
@@ -90,13 +91,14 @@ void print_cells(){
 }
 
 void update_cells(){
-  int i, j, cnt;
+  int i, j, cnt, cnt1;
   char temp[HEIGHT][WIDTH]; //逐次書き換えるとバグる。一時保存しておいてまとめて書き換える。
 
   //judge
   for(i = 1; i < HEIGHT - 1; i++){
     for(j = 1; j < WIDTH - 1; j++){
       cnt = 0;
+      cnt1 = 0;
 
       if(cells[i-1][j-1] == LIVE) {cnt++;}
       if(cells[i-1][j  ] == LIVE) {cnt++;}
@@ -106,23 +108,36 @@ void update_cells(){
       if(cells[i+1][j-1] == LIVE) {cnt++;}
       if(cells[i+1][j  ] == LIVE) {cnt++;}
       if(cells[i+1][j+1] == LIVE) {cnt++;}
+
+      if(cells[i-1][j-1] == ENEMY) {cnt1++;}
+      if(cells[i-1][j  ] == ENEMY) {cnt1++;}
+      if(cells[i-1][j+1] == ENEMY) {cnt1++;}
+      if(cells[i  ][j-1] == ENEMY) {cnt1++;}
+      if(cells[i  ][j+1] == ENEMY) {cnt1++;}
+      if(cells[i+1][j-1] == ENEMY) {cnt1++;}
+      if(cells[i+1][j  ] == ENEMY) {cnt1++;}
+      if(cells[i+1][j+1] == ENEMY) {cnt1++;}
       
+
       // 判定ルール
       if(cells[i][j] == DEAD){
-        if(cnt == 3){
-          temp[i][j] = LIVE;
+        if(cnt1 >= 1 && cnt1 >= 1){
+          temp[i][j] = ENEMY;
         }
-        else{
+        else if (cnt1 == 0 && cnt){
           temp[i][j] = DEAD;
         }
       }
-      else{
-        if(cnt <= 1 || cnt >= 4){
+      else if(cells[i][j] == LIVE){
+        if(cnt1 >= 1  || cnt >= 4){
           temp[i][j] = DEAD;
         }
         else{
           temp[i][j] = LIVE;
         }
+      }
+      else{
+        ;
       }      
     }
   }
@@ -172,7 +187,17 @@ void randinit_cells(int cell_rate){ // active cell rate[%]
   srand((unsigned)time(NULL));
   for(int i = 1; i < HEIGHT - 1; i++){
     for(int j = 1; j < WIDTH - 1; j++){
-      cells[i][j] = (rand()%100 < cell_rate) ? LIVE : DEAD;
+      if (rand()%100 < cell_rate){
+        if (rand()%100 < 30){
+          cells[i][j] = ENEMY;
+        }
+        else {
+          cells[i][j] = LIVE;
+        }
+      }
+      else {
+        cells[i][j] = DEAD;
+      }
     }
   }  
 }
