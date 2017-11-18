@@ -7,6 +7,7 @@ LIFE GAME
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <sys/time.h>
 #define WIDTH 70
 #define HEIGHT 40
 #define LIVE 'O'
@@ -232,6 +233,7 @@ void save(){
 }
 
 void autorun(int time){
+  struct timespec ts = {0, CLOCK * 10000000};
   // 実行
   for (int t = 0; t <= time; t++){
     int area = (WIDTH - 1) * (HEIGHT - 1);
@@ -241,7 +243,7 @@ void autorun(int time){
 	  printf("\ngen : %d\n", t);
     printf("active cell : %d/%d = %f%%\n", active, area, percentage);
 	  update_cells();
-	  usleep(CLOCK * 1000);
+	  nanosleep(&ts, NULL);
   }
 }
 
