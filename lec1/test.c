@@ -5,7 +5,11 @@
 #include <time.h>
 
 int main(){
-    time_t t;
-    time(&t);
-    printf("%ld", time(NULL));
+printf("atamagaokasiiiiiiiiiiiii\n");
+
+  struct timespec req = {0, 100 * 1000000};
+  for (int i = 0; i < 100; i++){
+  	printf("%d\n", i);
+  	nanosleep(&req, NULL);
+	}
 }
