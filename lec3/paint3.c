@@ -10,7 +10,8 @@ quit  --- プログラムを終了
 追加コマンド:
 rectangle x0 y0 width height  --- 左上の頂点が(x0, y0)で指定した幅と高さの長方形を描画
 circle x0 y0 r  --- 中心が (x0, y0) で半径が r の円を描画
-load [filename] --- 指定したファイル(未指定の場合デフォルトのファイル)から読み込み
+load [filename]  --- 指定したファイル(未指定の場合デフォルトのファイル)から読み込み
+export [filename]  --- 指定したファイル(未指定の場合デフォルトのファイル)にbmp形式で書き出し
 */
 
 #include <stdio.h>
@@ -259,7 +260,7 @@ void write_bitmap(const char *filename){
   for (int y = HEIGHT - 1; y >= 0; y--){
     memset(row, 0, byte_row * sizeof(char));
     for (int i = 0; i < byte_row; i++){ // byte
-      for (int j = 0; j < 8; j++){ //bit
+      for (int j = 0; j < 8 && i*8 + j < WIDTH; j++){ //bit
         if (canvas[i*8 + j][y] == '#'){
           row[i] = row[i] | (0b10000000 >> j);  // 左からj番目のビットを1に
         }      
