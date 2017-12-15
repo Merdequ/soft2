@@ -19,6 +19,8 @@ typedef struct
 City city[MAX_CITIES];
 char map[WIDTH][HEIGHT];
 
+double **dist_data;
+
 int max(const int a, const int b)
 {
   return (a > b) ? a : b;
@@ -97,9 +99,10 @@ double route_distance(const int n, int route[]){
 }
 
 double search(const int n, int i, int route[]){
-  fprintf(stderr, "visiting city %d at (%d, %d)\n", route[i], city[route[i]].x, city[route[i]].y);
+  // fprintf(stderr, "visiting city %d at (%d, %d)\n", route[i], city[route[i]].x, city[route[i]].y);
   if (i == n - 1){
-    return distance(route[i], route[0]);
+    // return distance(route[i], route[0]);
+    return dist_data[ route[i] ][ route[0] ];
   }
   double dist_min = DBL_MAX;
   double temp;
@@ -114,7 +117,8 @@ double search(const int n, int i, int route[]){
       continue;
     }
     route[i+1] = next;
-    temp = distance(route[i], route[(i+1)%n]) + search(n, i + 1, route);
+    //temp = distance(route[i], route[(i+1)%n]) + search(n, i + 1, route);
+    temp = dist_data[ route[i] ][ route[(i+1)%n] ] + search(n, i + 1, route);    
     if(temp < dist_min){
       dist_min = temp;
     }
@@ -164,6 +168,18 @@ int main(const int argc, const char **argv)
 
   plot_cities(fp, n, NULL);
   sleep(1);
+
+  // caliculate distance
+  dist_data = (double **)malloc(n * sizeof(double *));
+  for (int i=0; i < n; i++){
+    dist_data[i] = (double *)malloc(n * sizeof(double));
+  }
+
+  for (int i = 0; i < n; i++){
+    for (int j = 0; j < n; j++){
+      dist_data[i][j] = distance(i, j);
+    }
+  }
 
   int route[MAX_CITIES];
   const double d = solve(n, route);

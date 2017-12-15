@@ -25,6 +25,8 @@ typedef struct
 City city[MAX_CITIES];
 char map[WIDTH][HEIGHT];
 
+double **dist_data;
+
 int max(const int a, const int b)
 {
   return (a > b) ? a : b;
@@ -91,7 +93,7 @@ double distance(const int i, const int j)
   return sqrt(dx * dx + dy * dy);
 }
 
-double route_distance(const int n, const int route[]){
+double route_distance(const int n, int route[]){
   // Compute the total distance
   double sum_d = 0;
   for (int i = 0; i < n; i++) {
@@ -102,65 +104,59 @@ double route_distance(const int n, const int route[]){
   return sum_d;
 }
 
-void swap(int array[], int i, int j){
-  int temp = array[i];
-  array[i] = array[j];
-  array[j] = temp;
-}
-
-Routedata yamanobori_search(const int n, const int init_route[]){
-  Routedata current_route;
-  current_route.route = (int *)malloc(n * sizeof(int));
-  memcpy(current_route.route, init_route, n * sizeof(int));
-  current_route.distance = route_distance(n, init_route);
-
-  Routedata best_route;
-  best_route.route = (int *)malloc(n * sizeof(int));
-  Routedata temp_route;
-  temp_route.route = (int *)malloc(n * sizeof(int));
-
-  while(1){
-    memcpy(best_route.route, current_route.route, n * sizeof(int));
-    best_route.distance = current_route.distance;
-    for (int i = 1; i < n; i++){
-      for (int j = i + 1; j < n; j++){
-        memcpy(temp_route.route, current_route.route, n * sizeof(int));
-        temp_route.distance = current_route.distance;
-
-        swap(temp_route.route, i, j);
-        temp_route.distance = current_route.distance - \
-        (distance(i-1, i) + distance(i, (i+1)%n) + distance(j-1, j) + distance(j, (j+1)%n)) +\
-        (distance(i-1, j) + distance(j, (i+1)%n) + distance(j-1, i) + distance(i, (j+1)%n)); 
-        if (temp_route.distance < best_route.distance){
-          memcpy(best_route.route, temp_route.route, n * sizeof(int));
-          best_route.distance = temp_route.distance;
-        }
+Routedata *search(const int n, int i, int route[]){
+  // fprintf(stderr, "visiting city %d at (%d, %d)\n", route[i], city[route[i]].x, city[route[i]].y);
+  if (i == n - 1){
+    // return distance(route[i], route[0]);
+    Routedata *bestroute = (Routedata *)malloc(sizeof(Routedata));
+    bestroute->route = (int *)malloc(sizeof(int) * n);
+    memcpy(bestroute->route, route, sizeof(int) * n);
+    bestroute->distance = dist_data[ route[i] ][ route[0] ];
+    return bestroute;
+  }
+  Routedata *temp;
+  Routedata *bestroute = (Routedata *)malloc(sizeof(Routedata));
+  bestroute->route = NULL;
+  bestroute->distance = DBL_MAX;
+  for (int next = 1; next < n; next++){
+    int is_valid = 1;
+    for (int k = 1; k <= i; k++){
+      if (route[k] == next){
+        is_valid = 0;
       }
     }
-    if (best_route.distance < current_route.distance) {
-      memcpy(current_route.route, best_route.route, n * sizeof(int));
-      current_route.distance = best_route.distance;      
+    if (!is_valid){
+      continue;
+    }
+    route[i+1] = next;
+    temp = search(n, i + 1, route);
+    temp->distance += dist_data[ route[i] ][ route[(i+1)%n] ];
+    if(temp->distance < bestroute->distance){
+      if (bestroute->route != NULL){
+        free(bestroute->route);
+      }
+      free(bestroute);
+      bestroute = temp;
     }
     else{
-      break;
+      free(temp->route);
+      free(temp);
     }
   }
-  free(temp_route.route);
-  free(best_route.route);
-  return current_route;
+  return bestroute;
 }
 
-double solve(const int n, int route[]) // routeはメイン関数に結果を返す用
+double solve(const int n, int route[]) // routeは結果をmainに返す用の配列
 {
-  int init_route[n];
-  for (int i = 1; i < n; i++) {
-    init_route[i] = i;
-  }
-  Routedata final_route = yamanobori_search(n, init_route);
-  double sum_d = final_route.distance;
-  memcpy(route, final_route.route, n * sizeof(int));
-  free(final_route.route);
-  return sum_d;
+  int temproute[sizeof(int) * n];
+  temproute[0] = 0;  // Start from city[0]
+
+  Routedata *bestroute = search(n, 0, temproute);
+  memcpy(route, bestroute->route, sizeof(int) * n);
+  double dist = bestroute->distance;
+  free(bestroute->route);
+  free(bestroute);
+  return dist;
 }
 
 int main(const int argc, const char **argv)
@@ -188,6 +184,17 @@ int main(const int argc, const char **argv)
 
   plot_cities(fp, n, NULL);
   sleep(1);
+
+  // caliculate distance
+  dist_data = (double **)malloc(n * sizeof(double *));
+  for (int i=0; i < n; i++){
+    dist_data[i] = (double *)malloc(n * sizeof(double));
+  }
+  for (int i = 0; i < n; i++){
+    for (int j = 0; j < n; j++){
+      dist_data[i][j] = distance(i, j);
+    }
+  }
 
   int route[MAX_CITIES];
   const double d = solve(n, route);
