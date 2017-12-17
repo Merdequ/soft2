@@ -10,6 +10,8 @@
 #define HEIGHT 40
 #define MAX_CITIES 1000
 
+#define R_DEFAULT 0.999995
+
 typedef struct
 {
   int x;
@@ -121,91 +123,58 @@ void swap(int array[], int i, int j){
   array[j] = temp;
 }
 
-Routedata yamanobori_search(const int n, const int init_route[]){
+void random_neighbor(const int n, const int current[], Routedata *neighbor){
+  assert(n > 2);
+  memcpy(neighbor->route, current, n * sizeof(int));
+  int i = 1 + rand() % (n - 1);
+  int j;
+  while ((j = 1 + rand() % (n - 1)) == i) ;
+  swap(neighbor->route, i, j);
+  neighbor->distance = route_distance_quick(n, neighbor->route);
+}
+
+Routedata yakinamashi(const int n, const int init_route[], const double r){
   Routedata current_route;
   current_route.route = (int *)malloc(n * sizeof(int));
   memcpy(current_route.route, init_route, n * sizeof(int));
   current_route.distance = route_distance_quick(n, init_route);
 
-  Routedata best_route;
-  best_route.route = (int *)malloc(n * sizeof(int));
+  if(n <= 3){
+    return current_route;
+  }
+
+  double T = 1000;
+  const double T_threshhold = 0.001;
+
   Routedata temp_route;
   temp_route.route = (int *)malloc(n * sizeof(int));
 
-  while(1){
-    /* debug
-    printf("current route: ");
-    for (int i = 0; i < n; i++){
-      printf("%d ", current_route.route[i]);
+  while(T > T_threshhold){
+    random_neighbor(n, current_route.route, &temp_route);
+    double d = - temp_route.distance + current_route.distance;
+    if ( exp(d / T) > rand() / RAND_MAX){
+      memcpy(current_route.route, temp_route.route, n * sizeof(int));
+      current_route.distance = temp_route.distance;
+      //fprintf(stderr, "%lf %lf %lf\n", T, d, current_route.distance);
     }
-    printf("%lf", current_route.distance);
-    printf("\n"); 
-    */
-    
-    memcpy(best_route.route, current_route.route, n * sizeof(int));
-    best_route.distance = current_route.distance;
-    for (int i = 1; i < n; i++){
-      for (int j = i + 1; j < n; j++){
-        memcpy(temp_route.route, current_route.route, n * sizeof(int));
-        temp_route.distance = current_route.distance;
-
-        swap(temp_route.route, i, j);
-        temp_route.distance = route_distance_quick(n, temp_route.route);       
-        if (temp_route.distance < best_route.distance){
-          memcpy(best_route.route, temp_route.route, n * sizeof(int));
-          best_route.distance = temp_route.distance;
-        }
-      }
-    }
-    if (best_route.distance < current_route.distance) {
-      memcpy(current_route.route, best_route.route, n * sizeof(int));
-      current_route.distance = best_route.distance;      
-    }
-    else{
-      break;
-    }
+    T *= r;
   }
   free(temp_route.route);
-  free(best_route.route);
   return current_route;
 }
 
-void random_arrange(const int n, int array[]){
-  for (int i = 0; i < n; i++) {
-    array[i] = i;
-  }
-  // Shuffle
-  for (int i = 1; i < n; i++){
-    int j = 1 + rand() % (n - 1);
-    swap(array, i, j);
-  }
-}
-
-double solve(const int n, int route[], int trials) // routeはメイン関数に結果を返す用
+double solve(const int n, int route[], const double r) // routeはメイン関数に結果を返す用
 {
   int init_route[n];
-  Routedata test_route;
-  Routedata best_route;
-  best_route.route = (int *)malloc(n * sizeof(int));
-  best_route.distance = DBL_MAX;
-
-
-  if (trials == 0){
-    trials = n * n;
-  }
-  for (int i = 0; i < trials; i++){
-    random_arrange(n, init_route);
-    test_route = yamanobori_search(n, init_route);
-    if (test_route.distance < best_route.distance){
-      memcpy(best_route.route, test_route.route, n * sizeof(int));
-      best_route.distance = test_route.distance;
-      fprintf(stderr, "trial %d: %.14lf\n", i, test_route.distance);          
-    }
+  for (int i = 0; i < n; i++){
+    init_route[i] = i;
   }
 
-  double sum_d = best_route.distance;
-  memcpy(route, best_route.route, n * sizeof(int));
-  free(best_route.route);
+  Routedata final_route = yakinamashi(n, init_route, r);
+
+  double sum_d = final_route.distance;
+  memcpy(route, final_route.route, n * sizeof(int));
+  free(final_route.route);
   return sum_d;
 }
 
@@ -226,14 +195,14 @@ int main(const int argc, const char **argv)
   const int n = atoi(argv[1]);
   assert(n > 1 && n <= MAX_CITIES);
 
-  int trials;
+  double r;
   if (argc == 3){
-    trials = atoi(argv[2]);
-    assert(trials > 0);
+    r = atof(argv[2]);
+    assert(r > 0 && r < 1);
   }
   else{
-    trials = 0;
-    printf("trial time set to default\n");
+    r = R_DEFAULT ;
+    printf("r set to default value: %lf\n", R_DEFAULT);
   }
 
   int seed = 0;
@@ -260,9 +229,9 @@ int main(const int argc, const char **argv)
   sleep(1);
 
   int route[MAX_CITIES];
-  const double d = solve(n, route, trials);
-  printf("total distance = %lf\n", d);  
+  const double d = solve(n, route, r);
+  printf("total distance = %f\n", d);  
   plot_cities(fp, n, route);
-  fprintf(fp, "total distance = %lf\n", d);  
+  fprintf(fp, "total distance = %f\n", d);  
   return 0;
 }
